@@ -117,13 +117,15 @@ if (read_var == 1 || read_var == 3) {
   # Venn diagram of mutation comparison if 4 or fewer samples; plot as an upset plot if more than 4
   if (number_of_files <=4) {
     output_file <- "venn_plot.pdf"
-    ggvenn(data = venn_list,
-           show_percentage = FALSE,
-           stroke_linetype = 2,
-           stroke_size = 0.25,
-           set_name_size = 4.8,
-           text_size = 6
-    )
+    venn_plot <- ggvenn(data = venn_list,
+                  show_percentage = FALSE,
+                  stroke_linetype = 2,
+                  stroke_size = 0.25,
+                  set_name_size = 4.8,
+                  text_size = 6
+                )
+    venn_plot +
+      ggtitle("Overlapping and Independent Gene Mutations by Sample")
     ggsave(output_file)
     print(sprintf("***** Finished creating Venn diagram file. Location: %s/%s. *****", getwd(), output_file))
   } else {
@@ -155,7 +157,8 @@ if (read_var == 2 || read_var == 3) {
     ylab("Number of Variants") +
     xlab("Variant Type") +
     scale_y_continuous(trans = 'log10') +
-    facet_grid(.~Tumor_Sample_Barcode, scales = "free_x", space = "free_x",switch = "x")
+    facet_grid(.~Tumor_Sample_Barcode, scales = "free_x", space = "free_x",switch = "x") +
+    ggtitle("Variant Classifications and Types by Sample")
   ggsave(output_file, width = 14, height = 14)
   print(sprintf("***** Finished creating bar diagram file. Note the log10 scale on the y-axis/.Location: %s/%s *****", getwd(), output_file))
 }
