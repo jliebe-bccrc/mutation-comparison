@@ -1,3 +1,10 @@
+## Copyright Aparicio Lab (BC Cancer Research Centre), October 2022
+## Created by Jenna Liebe
+## This R script takes at least two MAF (or TXT) mutation data files and performs basic comparison operations:
+##  1. Compare the mutations present in each sample for overlap/independence, and print to a Venn diagram (or upset plot, if more than 4 samples)
+##  2. Display the types of mutations in each sample as a bar graph, based on variant_type and variant_classification
+## A stats file containing information on the total number of mutations and unknown genes in each sample will also be created.
+
 if (!require(tools)) install.packages("tools")
 if (!require(data.table)) install.packages("data.table")
 if (!require(ggvenn)) install.packages("ggvenn")
@@ -12,6 +19,7 @@ library(dplyr)
 library(ggplot2)
 library(UpSetR)
 
+## Read the command line arguments and validate files ##
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
@@ -19,7 +27,7 @@ if (length(args) == 0) {
 } else if (args[1] == "help") {
   stop("\nThis script takes a minimum of 2 MAF files as input to compare mutations.
        Inputs should be given with full paths. Example:
-       'script.R <full/filepath/to/sample_1.maf> <full/filepath/to/sample_2.maf> <full/filepath/to/sample_3.maf>'\n", call.=FALSE)
+       '<Rscript.exe or R.exe> 'path/to/mutCompare.R' 'path/to/sample_1.maf' 'path/to/sample_2.maf' 'path/to/sample_3.maf''\n", call.=FALSE)
 } else if (length(args) == 1 & args[1] != "help") {
   stop("\nAt least 2 samples must be compared. Use the argument 'help' for more information.", call.=FALSE)
 } else if (length(args) >= 2) {
@@ -40,7 +48,7 @@ if (length(args) == 0) {
     setwd(read_filepath)
   }
 
-  # All files and working directory validated, so we can continue
+  # Set the number of files (for future loops) and get the sample names
   number_of_files <- length(args)
   
   sample_names <- list()
@@ -51,17 +59,17 @@ if (length(args) == 0) {
 }
 
 
+## Stats on the samples ##
 sample_data <- list()
 
-print("Sample stats file will be outputted with the naming format 'sample_stats-<month>-<day>-<hour>-<minute>'")
-sys_time <- format(Sys.time(), "%m-%d-%H-%M")
+print("Sample stats file will be outputted with the naming format 'sample_stats-month-day-hour-minute-second.txt'")
+sys_time <- format(Sys.time(), "%m-%d-%H-%M-%S")
 stats_filename <- paste0("sample_stats-", sys_time)
 stats_filename <- paste0(stats_filename, ".txt")
 
-### Stats on the samples ###
-
 for (i in seq_along(args)) {
   sample_data[[i]] <- fread(file = args[i], header = TRUE, sep = "\t", data.table = FALSE, select = c("Tumor_Sample_Barcode", "Hugo_Symbol", "Tumor_Seq_Allele2", "Variant_Classification", "Variant_Type"))
+  
   current_sample <- sample_names[i]
   num_mutations <- nrow(sample_data[[i]])
   num_unknown <- sum(sample_data[[i]]$Hugo_Symbol == "Unknown")
@@ -71,10 +79,10 @@ for (i in seq_along(args)) {
   print(sprintf("Total mutations: %d", num_mutations))
   print(sprintf("Total unknown genes: %d", num_unknown))
   sink()
-
-  #print(sprintf("There are %d total mutations, %d of which are unknown genes, in sample %s", y, x, sample_names[i]))
 }
 
+
+## Read user input for output determination (Venn diagram, bar graph, or both) ##
 check_cond <- 0
 while (check_cond == 0) {
   cat("Enter 1 to compare gene mutation overlap between samples, enter 2 to compare variant types between samples, or enter 3 to do both: ")
@@ -90,14 +98,13 @@ while (check_cond == 0) {
 combined_sample_data <- bind_rows(sample_data)
 
 
-
-
-### Venn diagram of gene mutation overlap between samples ###
+## Venn diagram of gene mutation overlap between samples - user options 1 and 3 ##
 if (read_var == 1 || read_var == 3) {
   combined_sample_data_venn <- data.frame(combined_sample_data)
   combined_sample_data_venn <- combined_sample_data_venn[(combined_sample_data_venn$Hugo_Symbol != "Unknown"),]
   combined_sample_data_venn$GeneAllele <- paste(combined_sample_data_venn$Hugo_Symbol, combined_sample_data_venn$Tumor_Seq_Allele2, sep = "_")
 
+  # Create the list of data that will be used in the Venn diagram
   venn_list <- list()
   for (i in seq_along(sample_names)) {
     current_sample <- sample_names[i]
@@ -107,6 +114,7 @@ if (read_var == 1 || read_var == 3) {
     names(venn_list)[i] <- current_sample
   }
   
+  # Venn diagram of mutation comparison if 4 or fewer samples; plot as an upset plot if more than 4
   if (number_of_files <=4) {
     output_file <- "venn_plot.pdf"
     ggvenn(data = venn_list,
@@ -128,7 +136,7 @@ if (read_var == 1 || read_var == 3) {
 }
 
 
-### Bar graph of mutation type comparison ###
+## Bar graph of mutation type comparison - user options 2 and 3 ##
 if (read_var == 2 || read_var == 3) {
   combined_sample_data_bar <- subset(combined_sample_data, select = c(Tumor_Sample_Barcode, Variant_Classification, Variant_Type))
   
@@ -149,5 +157,5 @@ if (read_var == 2 || read_var == 3) {
     scale_y_continuous(trans = 'log10') +
     facet_grid(.~Tumor_Sample_Barcode, scales = "free_x", space = "free_x",switch = "x")
   ggsave(output_file, width = 14, height = 14)
-  print(sprintf("***** Finished creating bar diagram file. Location: %s/%s *****", getwd(), output_file))
+  print(sprintf("***** Finished creating bar diagram file. Note the log10 scale on the y-axis/.Location: %s/%s *****", getwd(), output_file))
 }
