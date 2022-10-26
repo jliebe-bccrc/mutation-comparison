@@ -62,8 +62,8 @@ if (length(args) == 0) {
 ## Stats on the samples ##
 sample_data <- list()
 
-print("Sample stats file will be outputted with the naming format 'sample_stats-month-day-hour-minute-second.txt'")
 sys_time <- format(Sys.time(), "%m-%d-%H-%M-%S")
+print(sprintf("Sample stats file will be outputted with the naming format 'sample_stats-%s.txt'", sys_time))
 stats_filename <- paste0("sample_stats-", sys_time)
 stats_filename <- paste0(stats_filename, ".txt")
 
@@ -78,6 +78,7 @@ for (i in seq_along(args)) {
   print(sprintf("Sample: %s", current_sample))
   print(sprintf("Total mutations: %d", num_mutations))
   print(sprintf("Total unknown genes: %d", num_unknown))
+  print("")
   sink()
 }
 
@@ -114,7 +115,7 @@ if (read_var == 1 || read_var == 3) {
     names(venn_list)[i] <- current_sample
   }
   
-  # Venn diagram of mutation comparison if 4 or fewer samples; plot as an upset plot if more than 4
+  # Venn diagram of mutation comparison if 4 or fewer samples; upset plot if more than 4
   if (number_of_files <=4) {
     output_file <- "venn_plot.pdf"
     venn_plot <- ggvenn(data = venn_list,
@@ -160,5 +161,5 @@ if (read_var == 2 || read_var == 3) {
     facet_grid(.~Tumor_Sample_Barcode, scales = "free_x", space = "free_x",switch = "x") +
     ggtitle("Variant Classifications and Types by Sample")
   ggsave(output_file, width = 14, height = 14)
-  print(sprintf("***** Finished creating bar diagram file. Note the log10 scale on the y-axis/.Location: %s/%s *****", getwd(), output_file))
+  print(sprintf("***** Finished creating bar diagram file. Note the log10 scale on the y-axis. Location: %s/%s *****", getwd(), output_file))
 }
